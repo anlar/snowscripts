@@ -1,0 +1,12 @@
+language: generic
+
+addons:
+  apt:
+    packages:
+      - python3-bs4
+      - libxml2-utils
+
+notifications:
+  email: false
+
+script: sh test.sh
