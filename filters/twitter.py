@@ -1,37 +1,32 @@
 #!/usr/bin/env python3
 
-import re, sys
-import urllib.request
+import re
+import sys
 from datetime import datetime, timezone
 
 from bs4 import BeautifulSoup
 
+page = sys.stdin.read()
+soup = BeautifulSoup(page, 'html.parser')
 
-url = sys.argv[1]
+title = soup.html.head.title.text
+link = soup.html.head.find('link', {'rel': 'canonical', 'href': True})['href']
 
 entries = []
 
-req = urllib.request.Request(url)
+timeline = soup.find('div', {'id': 'timeline'})
 
-with urllib.request.urlopen(req, timeout=30) as response:
-    page = response.read()
-    soup = BeautifulSoup(page, 'html.parser')
+for item in timeline.findAll('div', {'class': re.compile('.*js-stream-tweet.*')}):
+    timestamp = item.find('span', {'class': re.compile('.*js-short-timestamp.*')})['data-time']
 
-    title = soup.html.head.title.text
+    entry = {
+        'name': item['data-name'] + ' (@' + item['data-screen-name'] + ')',
+        'link': 'https://twitter.com' + item['data-permalink-path'],
+        'text': item.find('p', {'class': re.compile('TweetTextSize.*')}).text.strip(),
+        'updated': datetime.fromtimestamp(float(timestamp), timezone.utc).isoformat(),
+    }
 
-    timeline = soup.find('div', {'id': 'timeline'})
-
-    for item in timeline.findAll('div', {'class': re.compile('.*js-stream-tweet.*')}):
-        timestamp = item.find('span', {'class': re.compile('.*js-short-timestamp.*')})['data-time']
-
-        entry = {
-            'name': item['data-name'] + ' (@' + item['data-screen-name'] + ')',
-            'link': 'https://twitter.com' + item['data-permalink-path'],
-            'text': item.find('p', {'class': re.compile('TweetTextSize.*')}).text.strip(),
-            'updated': datetime.fromtimestamp(float(timestamp), timezone.utc).isoformat(),
-        }
-
-        entries.append(entry)
+    entries.append(entry)
 
 if entries:
     rss = '''<?xml version="1.0" encoding="utf-8"?>
@@ -46,7 +41,7 @@ if entries:
         </author>
         <id>{}</id>
 
-    '''.format(title, url, entries[0]['updated'], entries[0]['name'], url, url)
+    '''.format(title, link, entries[0]['updated'], entries[0]['name'], link, link)
 
     for entry in entries:
         rss += '''
@@ -61,6 +56,6 @@ if entries:
             </author>
             <content>{}</content>
         </entry>
-        '''.format(entry['text'], entry['link'], entry['link'], entry['updated'], entry['name'], url, entry['text'])
+        '''.format(entry['text'], entry['link'], entry['link'], entry['updated'], entry['name'], link, entry['text'])
 
     print(rss + '</feed>')
