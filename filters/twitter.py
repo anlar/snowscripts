@@ -20,11 +20,15 @@ for item in timeline.findAll('div', {'class': re.compile('.*js-stream-tweet.*')}
     timestamp = item.find('span', {'class': re.compile('.*js-short-timestamp.*')})['data-time']
     content = item.find('p', {'class': re.compile('TweetTextSize.*')})
 
+    for a in content.findAll('a'):
+        for tag in a.findAll(recursive=False):
+            tag.replaceWith(tag.text.strip())
+
     entry = {
         'name': item['data-name'] + ' (@' + item['data-screen-name'] + ')',
         'link': 'https://twitter.com' + item['data-permalink-path'],
         'text': content.text.strip(),
-        'html': content.prettify(),
+        'html': str(content),
         'updated': datetime.fromtimestamp(float(timestamp), timezone.utc).isoformat(),
     }
 
