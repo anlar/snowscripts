@@ -18,11 +18,13 @@ timeline = soup.find('div', {'id': 'timeline'})
 
 for item in timeline.findAll('div', {'class': re.compile('.*js-stream-tweet.*')}):
     timestamp = item.find('span', {'class': re.compile('.*js-short-timestamp.*')})['data-time']
+    content = item.find('p', {'class': re.compile('TweetTextSize.*')})
 
     entry = {
         'name': item['data-name'] + ' (@' + item['data-screen-name'] + ')',
         'link': 'https://twitter.com' + item['data-permalink-path'],
-        'text': item.find('p', {'class': re.compile('TweetTextSize.*')}).text.strip(),
+        'text': content.text.strip(),
+        'html': content.prettify(),
         'updated': datetime.fromtimestamp(float(timestamp), timezone.utc).isoformat(),
     }
 
@@ -54,8 +56,8 @@ if entries:
                 <name>{}</name>
                 <uri>{}</uri>
             </author>
-            <content>{}</content>
+            <content type="xhtml">{}</content>
         </entry>
-        '''.format(entry['text'], entry['link'], entry['link'], entry['updated'], entry['name'], link, entry['text'])
+        '''.format(entry['text'], entry['link'], entry['link'], entry['updated'], entry['name'], link, entry['html'])
 
     print(rss + '</feed>')
